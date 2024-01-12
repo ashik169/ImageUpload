@@ -18,9 +18,9 @@ Used Activity Result API picking an image.
 Parse gallery Uri using FileUtils finding file path.
 
 #### Home Screen
-![Alt text](https://github.com/ashik169/ImageUpload/blob/main/screenshots/Screenshot_20240112_home.png)
+<img src="https://github.com/ashik169/ImageUpload/blob/main/screenshots/Screenshot_20240112_home.png" alt="drawing" width="250"/>
 
-#### Preview Screen
-![Alt text](https://github.com/ashik169/ImageUpload/blob/main/screenshots/Screenshot_20240112_preview.png)
+#### Preview/Upload Screen
+<img src="https://github.com/ashik169/ImageUpload/blob/main/screenshots/Screenshot_20240112_preview.png" alt="drawing" width="250"/>
 
 
