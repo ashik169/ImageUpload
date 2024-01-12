@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/PickImageFragment">
+
+    <fragment
+        android:id="@+id/PickImageFragment"
+        android:name="com.ashik.imageupload.ui.PickImageFragment"
+        android:label="@string/image_pick_fragment_label"
+        tools:layout="@layout/fragment_pick_image">
+
+        <action
+            android:id="@+id/action_navigate_to_upload_image"
+            app:destination="@id/UploadImageFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/UploadImageFragment"
+        android:name="com.ashik.imageupload.ui.ImageUploadFragment"
+        android:label="@string/image_upload_fragment_label"
+        tools:layout="@layout/fragment_upload_image" />
+</navigation>
