@@ -12,7 +12,7 @@
     </string>
     <string name="camera">Camera</string>
     <string name="gallery">Gallery</string>
-    <string name="label_uploading">Uploading...</string>
+    <string name="label_uploading">Uploading…</string>
     <string name="preview_image">Preview Image</string>
     <string name="image_upload_success">Image uploaded successfully</string>
 </resources>

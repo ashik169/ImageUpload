@@ -53,11 +53,6 @@ object FileUtils {
         return null
     }
 
-    fun getPath(context: Context, uri: Uri): String {
-        val absolutePath = getFilePath(context, uri)
-        return absolutePath ?: uri.toString()
-    }
-
     fun getFilePath(context: Context, uri: Uri): String? {
         Log.d(TAG, "getLocalPath: $uri")
         if (DocumentsContract.isDocumentUri(context, uri)) {
