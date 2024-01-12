@@ -4,12 +4,11 @@
    for details.
 -->
 <data-extraction-rules>
-    <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
+    <!--<cloud-backup>
         <include .../>
         <exclude .../>
-        -->
-    </cloud-backup>
+        &ndash;&gt;
+    </cloud-backup>-->
     <!--
     <device-transfer>
         <include .../>
