@@ -1,4 +1,4 @@
-package com.ashik.imageupload.ui
+package com.ashik.imageupload.ui.home
 
 interface HomeCallback {
     val isLoading: Boolean

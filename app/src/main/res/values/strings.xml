@@ -4,6 +4,7 @@
     <string name="image_pick_fragment_label">Pick Image</string>
     <string name="image_upload_fragment_label">Preview</string>
     <string name="label_pick_image">Choose an Image</string>
+    <string name="label_choose_an_option">Choose an Option</string>
     <string name="upload_label">Upload</string>
     <string name="cancel_label">Cancel</string>
 
@@ -15,4 +16,6 @@
     <string name="label_uploading">Uploading…</string>
     <string name="preview_image">Preview Image</string>
     <string name="image_upload_success">Image uploaded successfully</string>
+
+    <string name="uploading_progress">Uploading %1$s</string>
 </resources>

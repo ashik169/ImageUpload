@@ -4,52 +4,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.PickImageFragment"
-    android:padding="16dp">
+    tools:context=".ui.home.HomeFragment">
 
-    <TextView
-        android:id="@+id/labelPickImage"
-        style="?textAppearanceBodyMedium"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvImages"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="@string/hint_pick_image"
-        android:textAlignment="center"
-        app:layout_constraintBottom_toTopOf="@+id/buttonCamera"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageView" />
-
-    <Button
-        android:id="@+id/buttonCamera"
-        android:layout_width="0dp"
-        android:layout_height="58dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="32dp"
-        android:layout_marginBottom="24dp"
-        android:text="@string/camera"
-        app:icon="@drawable/photo_camera_filled_24dp"
-        app:iconGravity="textStart"
+        android:layout_height="0dp"
+        android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/buttonGallery"
-        app:layout_constraintTop_toBottomOf="@+id/labelPickImage" />
-
-    <Button
-        android:id="@+id/buttonGallery"
-        android:layout_width="0dp"
-        android:layout_height="58dp"
-        android:layout_marginEnd="8dp"
-        android:text="@string/gallery"
-        app:icon="@drawable/photo_library_filled_24dp"
-        app:iconGravity="textStart"
-        app:layout_constraintBaseline_toBaselineOf="@+id/buttonCamera"
-        app:layout_constraintEnd_toStartOf="@+id/buttonCamera"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintHorizontal_chainStyle="packed"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+        tools:listitem="@layout/layout_grid_image"
+        tools:spanCount="3" />
 
     <ImageView
         android:id="@+id/imageView"
@@ -65,5 +33,37 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_chainStyle="packed"
         app:tint="@color/md_theme_dark_onPrimaryContainer" />
+
+    <TextView
+        android:id="@+id/labelPickImage"
+        style="?textAppearanceBodyMedium"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/hint_pick_image"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/imageView" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabPickImages"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/fab_margin"
+        android:clickable="true"
+        android:contentDescription="@string/label_choose_an_option"
+        android:focusable="true"
+        android:src="@android:drawable/ic_input_add"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/groupPlaceholder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:constraint_referenced_ids="imageView,labelPickImage" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
