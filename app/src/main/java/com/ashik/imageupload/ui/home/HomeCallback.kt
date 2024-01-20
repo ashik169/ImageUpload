@@ -4,4 +4,5 @@ interface HomeCallback {
     val isLoading: Boolean
     fun showLoading()
     fun hideLoading()
+    fun updateSubtitle(value: String?)
 }

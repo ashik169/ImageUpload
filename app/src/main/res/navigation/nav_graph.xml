@@ -3,21 +3,41 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/PickImageFragment">
+    app:startDestination="@id/HomeFragment">
 
     <fragment
-        android:id="@+id/PickImageFragment"
+        android:id="@+id/HomeFragment"
         android:name="com.ashik.imageupload.ui.home.HomeFragment"
         android:label="@string/app_name"
-        tools:layout="@layout/fragment_pick_image">
+        tools:layout="@layout/fragment_home">
 
         <action
             android:id="@+id/action_navigate_to_upload_image"
             app:destination="@id/UploadImageFragment" />
+
+        <action
+            android:id="@+id/action_navigate_to_preview"
+            app:destination="@id/PreviewFragment" />
     </fragment>
     <fragment
         android:id="@+id/UploadImageFragment"
-        android:name="com.ashik.imageupload.ui.preview.PreviewFragment"
-        android:label="@string/image_upload_fragment_label"
-        tools:layout="@layout/fragment_upload_image" />
+        android:name="com.ashik.imageupload.ui.upload.PreviewUploadFragment"
+        android:label="@string/preview_fragment_label"
+        tools:layout="@layout/fragment_preview_upload" />
+
+    <fragment
+        android:id="@+id/PreviewFragment"
+        android:name="com.ashik.imageupload.ui.preview.GalleryFragment"
+        android:label="@string/preview_fragment_label"
+        tools:layout="@layout/fragment_gallery">
+
+        <action
+            android:id="@+id/action_navigate_to_file_info"
+            app:destination="@id/FileInfoDialog" />
+    </fragment>
+
+    <dialog
+        android:id="@+id/FileInfoDialog"
+        android:name="com.ashik.imageupload.ui.preview.info.FileInfoDialogFragment"
+        tools:layout="@layout/dialog_file_info" />
 </navigation>

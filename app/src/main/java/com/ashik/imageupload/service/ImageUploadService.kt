@@ -8,24 +8,25 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.IBinder
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.MutableLiveData
 import com.ashik.imageupload.R
-import com.ashik.imageupload.utils.FileUtils
+import com.ashik.imageupload.dao.DataRepository
+import com.ashik.imageupload.extensions.parcelableArrayList
+import com.ashik.imageupload.model.FileInfoModel
+import com.ashik.imageupload.model.UploadProgressModel
 import com.google.android.material.color.MaterialColors
-import createCloudFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class ImageUploadService : Service() {
 
@@ -39,10 +40,11 @@ class ImageUploadService : Service() {
 
         private const val UPLOAD_NOTIFICATION_ID = 2
 
+        val UPLOAD_PROGRESS = MutableLiveData<UploadProgressModel?>()
+
         fun startService(packageContext: Context, bundle: Bundle) {
             val serviceIntent = Intent(
-                packageContext,
-                ImageUploadService::class.java
+                packageContext, ImageUploadService::class.java
             ).apply {
                 putExtras(bundle)
             }
@@ -53,11 +55,14 @@ class ImageUploadService : Service() {
     private val job = SupervisorJob()
     private val coroutineScope = CoroutineScope(Dispatchers.Default + job)
 
+    private lateinit var repository: DataRepository
+
     override fun onCreate() {
         super.onCreate()
+        repository = DataRepository.getInstance(application)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationChannel = NotificationChannel(
-                UPLOAD_CHANNEL_ID, UPLOAD_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT
+                UPLOAD_CHANNEL_ID, UPLOAD_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH
             )
             val notificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -65,65 +70,62 @@ class ImageUploadService : Service() {
         }
     }
 
-    override fun onBind(intent: Intent): IBinder? {
-//        TODO("Return the communication channel to the service.")
-        return null
-    }
+    override fun onBind(intent: Intent) = null
 
-    @Suppress("DEPRECATION")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         showForeground()
-        val uris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent?.extras?.getParcelableArrayList(IMAGE_URIS, Uri::class.java)
-        } else intent?.extras?.getParcelableArrayList(IMAGE_URIS)
+        val uris = intent?.extras?.parcelableArrayList<FileInfoModel>(IMAGE_URIS)
         if (!uris.isNullOrEmpty()) {
             uploadImages(uris.toList())
         } else {
-            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
+            stopForegroundService()
         }
         return START_STICKY
     }
 
-    private fun uploadImages(uris: List<Uri>) {
-        Log.i(TAG, "uploadImages -> $uris")
+    private fun uploadImages(list: List<FileInfoModel>) {
+        Log.i(TAG, "uploadImages -> $list")
         coroutineScope.launch {
-            for (i in uris.indices) {
-                val uri = uris[i]
-                val cloudFile = applicationContext.createCloudFile(uri.lastPathSegment)
-                Log.i(TAG, "cloudFile -> $cloudFile")
-                showNotificationProgress(i, uris.size, false)
-                withContext(Dispatchers.IO) {
-                    FileUtils.saveFileFromUri(
-                        this@ImageUploadService, uri, cloudFile.absolutePath
-                    )
-                }
+            for (i in list.indices) {
+                val infoModel = list[i]
+                updateNotification(i, list.size)
+                val uploadImage = repository.uploadImage(infoModel)
+                Log.i(TAG, "uploadImage -> ${uploadImage.isSuccess}")
             }
-            showNotificationProgress(0, uris.size, true)
+            updateNotification(0, list.size, true)
+            delay(2000)
             stopSelf()
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopForegroundService()
         }
     }
 
-    private fun showNotificationProgress(index: Int, totalCount: Int, isDone: Boolean) {
+    private fun updateNotification(index: Int, totalCount: Int, isDone: Boolean = false) {
+        val uploadProgressModel =
+            UploadProgressModel(totalFile = totalCount, fileIndex = index + 1, isDone = isDone)
         val builder = NotificationCompat.Builder(this, UPLOAD_CHANNEL_ID).apply {
             setSmallIcon(R.mipmap.ic_launcher)
-            priority = NotificationCompat.PRIORITY_DEFAULT
+            priority = NotificationCompat.PRIORITY_HIGH
             setContentTitle(getString(R.string.app_name))
             if (isDone) {
                 setContentText(getString(R.string.image_upload_success))
             } else {
                 val uploadProgress = ((index + 1) / totalCount) * 100
+                uploadProgressModel.progress = uploadProgress
                 setContentText(getString(R.string.uploading_progress, "${uploadProgress}%"))
                 setProgress(100, uploadProgress, false)
+                setSilent(true)
             }
         }
-        val notificationManagerCompat = NotificationManagerCompat.from(this)
+        UPLOAD_PROGRESS.postValue(uploadProgressModel)
         if (ActivityCompat.checkSelfPermission(
                 this@ImageUploadService, Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            notificationManagerCompat.notify(UPLOAD_NOTIFICATION_ID, builder.build())
+            val notificationManagerCompat = NotificationManagerCompat.from(this)
+            val notificationId =
+                if (isDone) ((UPLOAD_NOTIFICATION_ID + 1)..100).random() else UPLOAD_NOTIFICATION_ID
+            notificationManagerCompat.notify(notificationId, builder.build())
         }
     }
 
@@ -142,7 +144,14 @@ class ImageUploadService : Service() {
     }
 
     override fun onDestroy() {
+        UPLOAD_PROGRESS.postValue(null)
         super.onDestroy()
         job.cancel()
+    }
+
+    private fun stopForegroundService() {
+        @Suppress("DEPRECATION") if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) stopForeground(
+            STOP_FOREGROUND_REMOVE
+        ) else stopForeground(true)
     }
 }

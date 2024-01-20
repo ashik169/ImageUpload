@@ -16,9 +16,12 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:titleCentered="false"
+            app:subtitleCentered="true"
+            app:subtitleTextAppearance="?textAppearanceBodySmall"
+            app:titleCentered="true"
             app:titleTextAppearance="?textAppearanceTitleMedium"
-            tools:title="@string/image_pick_fragment_label" />
+            tools:subtitle="IMG_1000239323343.jpg"
+            tools:title="@string/preview_fragment_label" />
 
     </com.google.android.material.appbar.AppBarLayout>
 

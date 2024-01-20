@@ -11,13 +11,15 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.net.toUri
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.ashik.imageupload.extensions.createCacheImageFile
+import com.ashik.imageupload.extensions.getUriForFile
+import com.ashik.imageupload.extensions.hasPermission
+import com.ashik.imageupload.extensions.showToast
 import com.ashik.imageupload.utils.Constants
-import createImageFile
-import getUriForFile
-import hasPermission
-import showToast
+import java.io.File
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -56,7 +58,7 @@ open class MediaResultContract(
         get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
     private var isCameraPermission = false
-    private var photoUri: Uri? = null
+    private var photoFile: File? = null
 
     override fun onCreate(owner: LifecycleOwner) {
         super.onCreate(owner)
@@ -64,9 +66,7 @@ open class MediaResultContract(
         //        https://developer.android.com/training/basics/intents/result#custom
         //        https://developer.android.com/training/basics/intents/result
         mediaPermissionResultLauncher = registry.register(
-            randomRegisterKey,
-            owner,
-            ActivityResultContracts.RequestMultiplePermissions()
+            randomRegisterKey, owner, ActivityResultContracts.RequestMultiplePermissions()
         ) { permissionMap ->
             val allPermissionGranted = permissionMap.all(Map.Entry<String, Boolean>::value)
             when {
@@ -90,9 +90,7 @@ open class MediaResultContract(
             ) { it.takeIf { it.isNotEmpty() }?.let(mediaResultCallback::onImageResult) }
         } else {
             galleryResultLauncher = registry.register(
-                randomRegisterKey,
-                owner,
-                ActivityResultContracts.StartActivityForResult()
+                randomRegisterKey, owner, ActivityResultContracts.StartActivityForResult()
             ) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
                     val intent = result.data
@@ -112,6 +110,8 @@ open class MediaResultContract(
                         } else {
                             mediaResultCallback.onImageResult(uris)
                         }
+                    } else {
+                        context.showToast("Failed to pick image from gallery")
                     }
                     Log.e(TAG, "Uris -> $uris")
                 } else {
@@ -120,43 +120,36 @@ open class MediaResultContract(
             }
         }
 
-        cameraAppResultLauncher =
-            registry.register(
-                randomRegisterKey,
-                owner,
-                ActivityResultContracts.TakePicture()
-            ) {
-                Log.i(TAG, "cameraAppResultLauncher  -> $it")
-                if (it) {
-                    photoUri?.let { uri ->
-                        mediaResultCallback.onImageResult(mutableListOf(uri))
-                    }
+        cameraAppResultLauncher = registry.register(
+            randomRegisterKey, owner, ActivityResultContracts.TakePicture()
+        ) {
+            if (it) {
+                photoFile?.let { file ->
+                    mediaResultCallback.onImageResult(mutableListOf(file.toUri()))
                 }
             }
+        }
     }
 
     fun openCamera() {
         val permissions = mutableListOf<String>()
-        Manifest.permission.CAMERA.takeIf { !context.hasPermission(it) }
-            ?.let(permissions::add)
+        Manifest.permission.CAMERA.takeIf { !context.hasPermission(it) }?.let(permissions::add)
         Constants.READ_STORAGE_PERMISSION.takeIf { !context.hasPermission(it) }
             ?.let(permissions::add)
         if (permissions.isEmpty()) {
-            val photoFile = try {
-                context.createImageFile
+            photoFile = try {
+                val imageFile = context.createCacheImageFile
+                val photoUri = context.getUriForFile(imageFile)
+                Log.i(
+                    TAG, """photoUri -> $photoUri 
+                    |photoFile -> $photoFile""".trimMargin()
+                )
+                cameraAppResultLauncher.launch(photoUri)
+                imageFile
             } catch (ex: IOException) {
                 null
             }
-            Log.i(TAG, "photoFile ${photoFile.toString()}")
-            if (photoFile != null) {
-                photoUri = context.getUriForFile(photoFile)
-                Log.i(
-                    TAG, """photoUri -> $photoUri 
-                    | photoFile -> $photoFile""".trimMargin()
-                )
-                cameraAppResultLauncher.launch(photoUri)
-            } else {
-                Log.i(TAG, "photoFile  -> $photoFile")
+            if (photoFile == null) {
                 context.showToast("Error occurred while creating the File")
             }
         } else {

@@ -1,6 +1,11 @@
+package com.ashik.imageupload.extensions
+
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.os.Parcelable
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -26,15 +31,15 @@ fun Context.getUriForFile(file: File): Uri = FileProvider.getUriForFile(
     applicationContext, FileUtils.APP_AUTHORITY, file
 )
 
-val Context.createImageFile: File
+val Context.createCacheImageFile: File
     @Throws(IOException::class) get() {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ENGLISH).format(Date())
-        return File(filesDir, "IMG_${timeStamp}.jpg")
+        return File(cacheDir, "IMG_${timeStamp}.jpg")
     }
 
 @Throws(IOException::class)
 fun Context.createCloudFile(fileName: String?): File {
-    val cloudDir = File(filesDir, "cloud")
+    val cloudDir = File(filesDir, FileUtils.CLOUD_DIR_NAME)
     if (!cloudDir.exists()) cloudDir.mkdirs()
     return if (fileName.isNullOrEmpty()) {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ENGLISH).format(Date())
@@ -42,4 +47,15 @@ fun Context.createCloudFile(fileName: String?): File {
             cloudDir, "IMG_${timeStamp}.jpg"
         )
     } else File(cloudDir, fileName)
+}
+
+inline fun <reified T : Parcelable> Bundle?.parcelableArrayList(key: String): ArrayList<T>? {
+    this ?: return null
+    return when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> getParcelableArrayList(
+            key, T::class.java
+        )
+
+        else -> @Suppress("DEPRECATION") getParcelableArrayList(key)
+    }
 }

@@ -2,71 +2,91 @@ package com.ashik.imageupload.utils
 
 import android.content.Context
 import android.database.Cursor
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.util.Log
-import androidx.core.net.toUri
+import androidx.core.net.toFile
 import com.ashik.imageupload.BuildConfig
+import com.ashik.imageupload.extensions.createCacheImageFile
 import com.ashik.imageupload.utils.FileUtils.APP_AUTHORITY
-import createImageFile
-import java.io.BufferedOutputStream
+import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
-import java.io.InputStream
+import java.text.DecimalFormat
+import kotlin.math.log10
+import kotlin.math.pow
 
-val Uri.isAppLocalDocument: Boolean
+inline val Uri.isAppLocalDocument: Boolean
     get() = APP_AUTHORITY == authority
 
 /**
  * @return Whether the Uri authority is MediaProvider.
  */
-val Uri.isMediaDocument: Boolean
+inline val Uri.isMediaDocument: Boolean
     get() = "com.android.providers.media.documents" == authority
-
 
 /**
  * @return Whether the Uri authority is Google Photos.
  */
-val Uri.isGooglePhotosUri: Boolean
+inline val Uri.isGooglePhotosUri: Boolean
     get() = "com.google.android.apps.photos.contentprovider" == authority
+
+/**
+ * @return Whether the Uri authority is Google Drive.
+ */
+inline val Uri.isGoogleDriveUri: Boolean
+    get() = "com.google.android.apps.docs.storage.legacy" == authority || "com.google.android.apps.docs.storage" == authority
+
+/**
+ * @return Whether the Uri authority is ExternalStorageProvider.
+ */
+inline val Uri.isExternalStorageDocument: Boolean
+    get() = "com.android.externalstorage.documents" == authority
 
 object FileUtils {
     private const val TAG = "FileUtils"
 
     const val APP_AUTHORITY = "${BuildConfig.APPLICATION_ID}.fileprovider"
+    const val CLOUD_DIR_NAME = "cloud"
 
-    fun getFilePath(context: Context, uri: Uri): String? {
+    fun getRealPathFromUri(context: Context, uri: Uri): String? {
         Log.d(TAG, "getLocalPath: $uri")
         if (uri.isAppLocalDocument) return uri.toString()
         if (DocumentsContract.isDocumentUri(context, uri)) {
-            if (uri.isMediaDocument) {
-                val docId = DocumentsContract.getDocumentId(uri)
-                val split = docId.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                val contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                val selection = "_id=?"
-                val selectionArgs = arrayOf(split[1])
-                return getDataColumn(context, contentUri, selection, selectionArgs)
+            when {
+                uri.isMediaDocument -> {
+                    val docId = DocumentsContract.getDocumentId(uri)
+                    val split =
+                        docId.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                    val contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                    val selection = "_id=?"
+                    val selectionArgs = arrayOf(split[1])
+                    Log.i(
+                        TAG, """MediaDocument:Uri -> $uri
+                        |split -> $split
+                        |contentUri -> $contentUri
+                    """.trimMargin()
+                    )
+                    return getDataColumn(context, contentUri, selection, selectionArgs)
+                }
+
+                uri.isExternalStorageDocument -> {
+                    val destinationFile = context.createCacheImageFile
+                    saveFileFromUri(context, uri, destinationFile.absolutePath)
+                    return destinationFile.absolutePath
+                }
             }
         } else if ("content".equals(uri.scheme, ignoreCase = true)) {
             return if (uri.isGooglePhotosUri) {
-                val destinationFile = context.createImageFile
+                val destinationFile = context.createCacheImageFile
                 saveFileFromUri(context, uri, destinationFile.absolutePath)
-                /*val buffer = ByteArray(2048)
-                val outputStream = FileOutputStream(File(context.filesDir, "test.jpg"))
-                context.contentResolver.openInputStream(uri)?.use { fileIn ->
-                    outputStream.use { fileOut ->
-                        while (true) {
-                            val length = fileIn.read(buffer)
-                            if (length <= 0)
-                                break
-                            fileOut.write(buffer, 0, length)
-                        }
-                        fileOut.flush()
-                        fileOut.close()
-                    }
-                }*/
-                destinationFile.toUri().toString()
+                destinationFile.toString()
+            } else if (uri.isGoogleDriveUri) {
+                val destinationFile = context.createCacheImageFile
+                saveFileFromUri(context, uri, destinationFile.absolutePath)
+                destinationFile.toString()
             } else getDataColumn(context, uri, null, null)
         } else if ("file".equals(uri.scheme, ignoreCase = true)) {
             return uri.path
@@ -95,8 +115,21 @@ object FileUtils {
         return null
     }
 
-    fun saveFileFromUri(context: Context, uri: Uri, destinationPath: String?) {
-        var inputStream: InputStream? = null
+    private fun saveFileFromUri(context: Context, uri: Uri, destinationPath: String) {
+        val buffer = ByteArray(2048)
+        val outputStream = FileOutputStream(destinationPath)
+        context.contentResolver.openInputStream(uri)?.use { fileIn ->
+            outputStream.use { fileOut ->
+                while (true) {
+                    val length = fileIn.read(buffer)
+                    if (length <= 0)
+                        break
+                    fileOut.write(buffer, 0, length)
+                }
+                fileOut.close()
+            }
+        }
+        /*var inputStream: InputStream? = null
         var bos: BufferedOutputStream? = null
         try {
             inputStream = context.contentResolver.openInputStream(uri)
@@ -115,7 +148,52 @@ object FileUtils {
             } catch (e: IOException) {
                 e.printStackTrace()
             }
+        }*/
+    }
+
+    @Throws(Exception::class)
+    fun saveCompressImage(context: Context, uri: Uri, destinationPath: String) {
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = 2
         }
+        val scheme = uri.scheme
+        Log.i(TAG, "scheme -> $scheme")
+        val inputBitmap = if (scheme == "file") {
+            val srcFile = uri.toFile()
+            BitmapFactory.decodeFile(srcFile.absolutePath, options)
+                ?: throw NullPointerException("Bitmap not found -> $srcFile")
+        } else {
+            context.contentResolver.openInputStream(uri).use {
+                BitmapFactory.decodeStream(it, null, options)
+            } ?: throw NullPointerException("Bitmap not found")
+        }
+
+        FileOutputStream(destinationPath).use {
+            inputBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+            it.flush()
+        }
+    }
+
+    fun getBitmap(file: File): Bitmap? {
+        return try {
+            val options = BitmapFactory.Options().apply {
+                inSampleSize = 1
+            }
+            BitmapFactory.decodeFile(file.absolutePath, options)
+                ?: throw NullPointerException("Bitmap not found -> $file")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    fun fileSize(size: Long): String {
+        if (size <= 0) return "0"
+        val units = arrayOf("B", "kB", "MB", "GB", "TB")
+        val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
+        return DecimalFormat("#,##0.#").format(
+            size / 1024.0.pow(digitGroups.toDouble())
+        ) + " " + units[digitGroups]
     }
 }
 

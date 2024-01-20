@@ -7,17 +7,22 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.ashik.imageupload.databinding.LayoutGridImageBinding
-import java.io.File
+import com.ashik.imageupload.model.FileInfoModel
+import com.ashik.imageupload.utils.ImageCache
 
-class GridImageAdapter(private val itemCallback: (File) -> Unit) :
-    ListAdapter<File, GridImageAdapter.GridImageVH>(DIFF_UTIL_CALLBACK) {
+class GridImageAdapter(private val itemCallback: (FileInfoModel, Int) -> Unit) :
+    ListAdapter<FileInfoModel, GridImageAdapter.GridImageVH>(DIFF_UTIL_CALLBACK) {
+
+    val imageCache = ImageCache.getInstance()
 
     inner class GridImageVH(
-        private val binding: LayoutGridImageBinding,
-        callback: (GridImageVH, Int) -> Unit
+        private val binding: LayoutGridImageBinding, callback: (GridImageVH, Int) -> Unit
     ) : RecyclerView.ViewHolder(binding.root) {
-        fun onBindData(file: File) {
-            binding.imagePreview.setImageURI(file.toUri())
+        fun onBindData(fileInfoModel: FileInfoModel) {
+            when (val bitmap = imageCache.get(fileInfoModel.file.absolutePath)) {
+                null -> binding.imagePreview.setImageURI(fileInfoModel.file.toUri())
+                else -> binding.imagePreview.setImageBitmap(bitmap)
+            }
         }
 
         init {
@@ -35,7 +40,7 @@ class GridImageAdapter(private val itemCallback: (File) -> Unit) :
         val binding =
             LayoutGridImageBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return GridImageVH(binding) { optionVH, i ->
-            itemCallback(getItem(i))
+            itemCallback(getItem(i), i)
         }
     }
 
@@ -44,12 +49,14 @@ class GridImageAdapter(private val itemCallback: (File) -> Unit) :
     }
 
     companion object {
-        val DIFF_UTIL_CALLBACK = object : DiffUtil.ItemCallback<File>() {
-            override fun areItemsTheSame(oldItem: File, newItem: File): Boolean {
-                return oldItem == newItem
+        val DIFF_UTIL_CALLBACK = object : DiffUtil.ItemCallback<FileInfoModel>() {
+            override fun areItemsTheSame(oldItem: FileInfoModel, newItem: FileInfoModel): Boolean {
+                return oldItem.file.absolutePath == newItem.file.absolutePath
             }
 
-            override fun areContentsTheSame(oldItem: File, newItem: File): Boolean {
+            override fun areContentsTheSame(
+                oldItem: FileInfoModel, newItem: FileInfoModel
+            ): Boolean {
                 return oldItem == newItem
             }
         }

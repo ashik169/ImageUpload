@@ -16,22 +16,25 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ashik.imageupload.R
-import com.ashik.imageupload.databinding.FragmentPickImageBinding
+import com.ashik.imageupload.databinding.FragmentHomeBinding
 import com.ashik.imageupload.databinding.PickImageOptionsBinding
 import com.ashik.imageupload.model.ImageOption
 import com.ashik.imageupload.model.ResultState
+import com.ashik.imageupload.service.ImageUploadService
 import com.ashik.imageupload.ui.IMediaResultCallback
 import com.ashik.imageupload.ui.MediaResultContract
 import com.ashik.imageupload.ui.imageoption.ImageOptionAdapter
-import com.ashik.imageupload.ui.preview.PreviewFragment
+import com.ashik.imageupload.ui.preview.GalleryFragment
+import com.ashik.imageupload.ui.upload.PreviewUploadFragment
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 
 class HomeFragment : Fragment(), IMediaResultCallback {
 
-    private var _binding: FragmentPickImageBinding? = null
+    private var _binding: FragmentHomeBinding? = null
 
     private val binding get() = _binding!!
 
@@ -49,16 +52,48 @@ class HomeFragment : Fragment(), IMediaResultCallback {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentPickImageBinding.inflate(inflater, container, false)
+        _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val gridImageAdapter = GridImageAdapter {
+        ImageUploadService.UPLOAD_PROGRESS.observe(viewLifecycleOwner) {
+            when {
+                it == null -> {
+                    // Do Nothing
+                }
 
+                it.isDone -> {
+                    viewModel.fetchImages()
+                    binding.layoutUploadStatus.isVisible = true
+                    binding.textUploadStatus.text = getString(R.string.image_upload_success)
+                    binding.textUploadProgress.isVisible = false
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        delay(2000)
+                        binding.layoutUploadStatus.isVisible = false
+                    }
+                }
+
+                else -> {
+                    binding.layoutUploadStatus.isVisible = true
+                    binding.textUploadStatus.text = "%s %d/%d".format(
+                        getString(R.string.label_uploading),
+                        it.fileIndex,
+                        it.totalFile
+                    )
+                    binding.textUploadProgress.text = "%d%s".format(it.progress, "%")
+                }
+            }
         }
-        viewModel.fetchImages()
+        binding.swipeRefresh.setOnRefreshListener(viewModel::fetchImages)
+        val gridImageAdapter = GridImageAdapter { _, index ->
+            findNavController().navigate(
+                R.id.action_navigate_to_preview, bundleOf(
+                    GalleryFragment.FILE_INDEX to index
+                )
+            )
+        }
         binding.fabPickImages.setOnClickListener(::onClickPickImage)
         binding.rvImages.apply {
             layoutManager = GridLayoutManager(context, 3, RecyclerView.VERTICAL, false)
@@ -67,20 +102,21 @@ class HomeFragment : Fragment(), IMediaResultCallback {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 viewModel.files.collectLatest {
+                    binding.swipeRefresh.isRefreshing = it is ResultState.Loading
                     when (it) {
                         is ResultState.Error -> {
-                            binding.groupPlaceholder.isVisible = true
+                            binding.layoutPlaceholder.isVisible = true
                             gridImageAdapter.submitList(listOf())
                         }
 
                         is ResultState.Loading -> {
-                            binding.groupPlaceholder.isVisible = true
+                            binding.layoutPlaceholder.isVisible = true
                             gridImageAdapter.submitList(listOf())
                         }
 
                         is ResultState.Success -> {
                             val files = it.data
-                            binding.groupPlaceholder.isVisible = files.isEmpty()
+                            binding.layoutPlaceholder.isVisible = files.isEmpty()
                             gridImageAdapter.submitList(files)
                         }
                     }
@@ -122,7 +158,7 @@ class HomeFragment : Fragment(), IMediaResultCallback {
     override fun onImageResult(uris: List<Uri>) {
         findNavController().navigate(
             R.id.action_navigate_to_upload_image, bundleOf(
-                PreviewFragment.IMAGE_URIS to uris
+                PreviewUploadFragment.IMAGE_URIS to uris
             )
         )
     }
