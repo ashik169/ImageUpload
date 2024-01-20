@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -44,6 +45,7 @@ class FileInfoDialogFragment : BottomSheetDialogFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 fileInfoViewModel.fileInfo.collectLatest {
+                    binding.progressBar.isVisible = it is ResultState.Loading
                     when (it) {
                         is ResultState.Error -> {
                             requireContext().showToast(it.exception.message.toString())

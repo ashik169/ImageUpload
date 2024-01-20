@@ -13,7 +13,7 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import com.ashik.imageupload.R
-import com.ashik.imageupload.databinding.ActivityMainBinding
+import com.ashik.imageupload.databinding.ActivityHomeBinding
 import com.ashik.imageupload.ui.upload.PreviewUploadFragment
 import com.ashik.imageupload.utils.Constants
 
@@ -21,14 +21,14 @@ class HomeActivity : AppCompatActivity(), HomeCallback {
 
     private lateinit var navController: NavController
     private lateinit var appBarConfiguration: AppBarConfiguration
-    private lateinit var binding: ActivityMainBinding
+    private lateinit var binding: ActivityHomeBinding
 
     private var loading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
+        binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         setSupportActionBar(binding.toolbar)
@@ -36,6 +36,7 @@ class HomeActivity : AppCompatActivity(), HomeCallback {
         navController = findNavController(R.id.nav_host_fragment_content_main)
         appBarConfiguration = AppBarConfiguration(navController.graph)
         setupActionBarWithNavController(navController, appBarConfiguration)
+        binding.toolbar.setNavigationOnClickListener { _ ->  navController.navigateUp(appBarConfiguration) }
         navController.addOnDestinationChangedListener { _, navDestination, _ ->
             if (navDestination.id == R.id.FileInfoDialog) {
                 return@addOnDestinationChangedListener
@@ -87,7 +88,6 @@ class HomeActivity : AppCompatActivity(), HomeCallback {
     }
 
     override fun onSupportNavigateUp(): Boolean {
-//        val navController = findNavController(R.id.nav_host_fragment_content_main)
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
     }
 

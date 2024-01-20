@@ -5,16 +5,22 @@ import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.util.Log
 import androidx.core.net.toFile
+import androidx.core.net.toUri
 import com.ashik.imageupload.BuildConfig
 import com.ashik.imageupload.extensions.createCacheImageFile
+import com.ashik.imageupload.model.FileInfoModel
 import com.ashik.imageupload.utils.FileUtils.APP_AUTHORITY
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.file.Files
+import java.nio.file.attribute.BasicFileAttributes
 import java.text.DecimalFormat
+import kotlin.io.path.Path
 import kotlin.math.log10
 import kotlin.math.pow
 
@@ -185,6 +191,36 @@ object FileUtils {
             e.printStackTrace()
             return null
         }
+    }
+
+    fun getFileInfo(file: File): FileInfoModel {
+        val fileInfoModel: FileInfoModel? = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                val attrs = Files.readAttributes(
+                    Path(file.absolutePath), BasicFileAttributes::class.java
+                )
+                FileInfoModel(
+                    uri = file.toUri(),
+                    file = file,
+                    fileName = file.name,
+                    fileSize = attrs.size(),
+                    createdDate = DateUtil.getUIDateTimeFormat(
+                        attrs.creationTime().toMillis()
+                    ),
+                    lastModified = DateUtil.getUIDateTimeFormat(file.lastModified())
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return fileInfoModel ?: FileInfoModel(
+            uri = file.toUri(),
+            file = file,
+            fileName = file.name,
+            fileSize = file.length(),
+            lastModified = DateUtil.getUIDateTimeFormat(file.lastModified())
+        )
     }
 
     fun fileSize(size: Long): String {

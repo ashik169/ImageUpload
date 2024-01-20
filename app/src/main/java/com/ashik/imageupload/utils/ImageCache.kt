@@ -7,8 +7,6 @@ class ImageCache private constructor() {
 
     companion object {
 
-        private const val TAG = "DataRepository"
-
         @Volatile
         private var instance: ImageCache? = null
 

@@ -86,8 +86,6 @@ class PreviewUploadFragment : Fragment() {
                                 findNavController().popBackStack()
                             }
                         }
-
-                        else -> {}
                     }
                 }
             }

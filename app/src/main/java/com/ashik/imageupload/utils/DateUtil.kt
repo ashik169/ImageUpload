@@ -6,9 +6,7 @@ import java.util.Locale
 
 object DateUtil {
 
-    const val UI_DATE_PATTERN = "dd MMM yyyy"
-    const val UI_TIME_PATTERN = "hh:mm aa"
-    const val UI_DATE_TIME_PATTERN = "dd MMM yyyy hh:mm a"
+    private const val UI_DATE_TIME_PATTERN = "dd MMM yyyy hh:mm a"
     fun getUIDateTimeFormat(lastModified: Long): String? {
         return try {
             val simpleDateFormat = SimpleDateFormat(UI_DATE_TIME_PATTERN, Locale.ENGLISH)

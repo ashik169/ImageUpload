@@ -8,7 +8,7 @@
     <string name="cancel_label">Cancel</string>
 
     <string name="hint_pick_image">
-        Pick a image from Camera or Gallery
+        Click + Add Button\nUpload images from either camera or gallery\nCan share images from your phone gallery app
     </string>
     <string name="camera">Camera</string>
     <string name="gallery">Gallery</string>
@@ -19,4 +19,7 @@
     <string name="uploading_progress">Uploading %1$s</string>
     <string name="label_info">Info</string>
     <string name="file_info">File Info</string>
+    <string name="hint_max_img_allow">Maximum %1$d images allow picks from gallery</string>
+    <string name="label_add">Add</string>
+    <string name="menu_item_delete">Delete</string>
 </resources>

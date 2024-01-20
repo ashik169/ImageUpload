@@ -11,9 +11,12 @@ import com.ashik.imageupload.model.FileInfoModel
 import com.ashik.imageupload.model.ResultState
 import com.ashik.imageupload.utils.DateUtil
 import com.ashik.imageupload.utils.FileUtils
+import com.ashik.imageupload.utils.FileUtils.getFileInfo
 import com.ashik.imageupload.utils.ImageCache
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,6 +35,9 @@ class HomeViewModel(
     private val _files = MutableStateFlow<ResultState<List<FileInfoModel>>>(ResultState.Loading())
     val files = _files.asStateFlow()
 
+    private val _deleteFile = MutableSharedFlow<ResultState<Boolean>>()
+    val deleteFile = _deleteFile.asSharedFlow()
+
     init {
         fetchImages()
     }
@@ -39,7 +45,7 @@ class HomeViewModel(
     fun fetchImages() {
         viewModelScope.launch {
             _files.value = ResultState.Loading()
-            val fileList = repository.getCloudFiles().map(::getFileInfo)
+            val fileList = repository.getCloudFiles().map(FileUtils::getFileInfo)
             withContext(Dispatchers.IO) {
                 fileList.forEach { fileInfo ->
                     FileUtils.getBitmap(fileInfo.file)?.let {
@@ -51,40 +57,20 @@ class HomeViewModel(
         }
     }
 
-    private fun getFileInfo(file: File): FileInfoModel {
-        val fileInfoModel: FileInfoModel? = null
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                val attrs = Files.readAttributes(
-                    Path(file.absolutePath), BasicFileAttributes::class.java
-                )
-                Log.i(
-                    "HomeViewModel", """Size => ${attrs.size()}
-                            |Directory => ${attrs.isDirectory}
-                            |Link => ${attrs.isSymbolicLink}
-                            |Created Date => ${attrs.creationTime()}
-                            |Last Modified => ${attrs.lastModifiedTime()}
-                        """.trimMargin()
-                )
-                FileInfoModel(
-                    uri = file.toUri(),
-                    file = file,
-                    fileName = file.name,
-                    fileSize = attrs.size(),
-                    createdDate = DateUtil.getUIDateTimeFormat(
-                        attrs.creationTime().toMillis()
-                    ),
-                    lastModified = DateUtil.getUIDateTimeFormat(file.lastModified())
-                )
-            } catch (_: Exception) {
+    fun deleteFiles(selectedItems: MutableList<FileInfoModel>) {
+        Log.i("HomeViewModel", "deleteFiles -> $selectedItems")
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    selectedItems.forEach {
+                        val delete = it.file.delete()
+                        Log.i("HomeViewModel", "Delete File -> ${it.file} -> $delete")
+                    }
+                    _deleteFile.emit(ResultState.Success(true))
+                } catch (e: Exception) {
+                    _deleteFile.emit(ResultState.Success(false))
+                }
             }
         }
-        return fileInfoModel ?: FileInfoModel(
-            uri = file.toUri(),
-            file = file,
-            fileName = file.name,
-            fileSize = file.length(),
-            lastModified = DateUtil.getUIDateTimeFormat(file.lastModified())
-        )
     }
 }

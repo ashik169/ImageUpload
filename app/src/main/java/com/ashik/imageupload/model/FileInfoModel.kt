@@ -13,4 +13,5 @@ data class FileInfoModel(
     val fileSize: Long? = null,
     val createdDate: String? = null,
     val lastModified: String? = null,
+    var isSelected: Boolean = false,
 ) : Parcelable
