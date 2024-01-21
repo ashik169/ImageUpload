@@ -1,8 +1,8 @@
 package com.ashik.imageupload.ui.home
 
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,18 +23,19 @@ import com.ashik.imageupload.R
 import com.ashik.imageupload.databinding.FragmentHomeBinding
 import com.ashik.imageupload.databinding.PickImageOptionsBinding
 import com.ashik.imageupload.extensions.showToast
-import com.ashik.imageupload.model.FileInfoModel
 import com.ashik.imageupload.model.ImageOption
 import com.ashik.imageupload.model.ResultState
-import com.ashik.imageupload.service.ImageUploadService
+import com.ashik.imageupload.service.FileBackgroundService
 import com.ashik.imageupload.ui.IMediaResultCallback
 import com.ashik.imageupload.ui.MediaResultContract
 import com.ashik.imageupload.ui.imageoption.ImageOptionAdapter
 import com.ashik.imageupload.ui.preview.GalleryFragment
+import com.ashik.imageupload.ui.preview.ImagePreviewPagerAdapter
 import com.ashik.imageupload.ui.upload.PreviewUploadFragment
 import com.ashik.imageupload.utils.Constants
 import com.ashik.imageupload.utils.ImageDeleteActionMode
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -52,8 +53,17 @@ class HomeFragment : Fragment(), IMediaResultCallback {
     private val viewModel: HomeViewModel by activityViewModels()
 
     private lateinit var gridImageAdapter: GridImageAdapter
-    private lateinit var imageDeleteActionMode: ImageDeleteActionMode
+    private lateinit var deleteActionMode: ImageDeleteActionMode
     private var actionMode: ActionMode? = null
+
+
+    private var homeCallback: HomeCallback? = null
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        if (context is HomeCallback) homeCallback = context
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mediaResultContract =
@@ -70,54 +80,14 @@ class HomeFragment : Fragment(), IMediaResultCallback {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        ImageUploadService.UPLOAD_PROGRESS.observe(viewLifecycleOwner) {
-            when {
-                it == null -> {
-                    // Do Nothing
-                }
-
-                it.isDone -> {
-                    viewModel.fetchImages()
-                    binding.layoutUploadStatus.isVisible = true
-                    binding.textUploadStatus.text = getString(R.string.image_upload_success)
-                    binding.textUploadProgress.isVisible = false
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        delay(2000)
-                        binding.layoutUploadStatus.isVisible = false
-                    }
-                }
-
-                else -> {
-                    binding.layoutUploadStatus.isVisible = true
-                    binding.textUploadStatus.text = "%s %d/%d".format(
-                        getString(R.string.label_uploading), it.fileIndex, it.totalFile
-                    )
-                    binding.textUploadProgress.text = "%d%s".format(it.progress, "%")
-                }
-            }
+        initObserver()
+        initAdapter()
+        deleteActionMode = ImageDeleteActionMode(
+            onShareClicked = ::onShareClicked, onDeleteClicked = ::onDeleteClicked
+        ) {
+            gridImageAdapter.resetSelection()
+            binding.fabPickImages.show()
         }
-        binding.swipeRefresh.setOnRefreshListener(viewModel::fetchImages)
-        gridImageAdapter = GridImageAdapter(onItemClicked = { _, _, index ->
-            findNavController().navigate(
-                R.id.action_navigate_to_preview, bundleOf(
-                    GalleryFragment.FILE_INDEX to index
-                )
-            )
-        }, onItemLongClicked = { _, _, _ ->
-            actionMode =
-                (activity as? AppCompatActivity)?.startSupportActionMode(imageDeleteActionMode)
-            binding.fabPickImages.hide()
-        }, onSelectionChanged = {
-            actionMode?.title = "%d Selected".format(gridImageAdapter.selectedItems.size)
-            actionMode?.menu?.findItem(R.id.action_delete)?.isVisible =
-                gridImageAdapter.selectedItems.isNotEmpty()
-        })
-
-        imageDeleteActionMode = ImageDeleteActionMode(
-            context = view.context,
-            onDeleteClicked = ::onDeleteClicked,
-            onDestroyMode = gridImageAdapter::resetSelection
-        )
         binding.fabPickImages.setOnClickListener(::onClickPickImage)
         binding.rvImages.apply {
             layoutManager = GridLayoutManager(context, 3, RecyclerView.VERTICAL, false)
@@ -130,13 +100,11 @@ class HomeFragment : Fragment(), IMediaResultCallback {
                         binding.swipeRefresh.isRefreshing = it is ResultState.Loading
                         when (it) {
                             is ResultState.Error -> {
-                                binding.layoutPlaceholder.isVisible = true
-                                gridImageAdapter.submitList(listOf())
+                                context?.showToast(it.exception.message.toString())
                             }
 
                             is ResultState.Loading -> {
-                                binding.layoutPlaceholder.isVisible = true
-                                gridImageAdapter.submitList(listOf())
+                                // Do Nothing
                             }
 
                             is ResultState.Success -> {
@@ -147,36 +115,109 @@ class HomeFragment : Fragment(), IMediaResultCallback {
                         }
                     }
                 }
-                launch {
-                    viewModel.deleteFile.collectLatest {
-                        binding.swipeRefresh.isRefreshing = it is ResultState.Loading
-                        when (it) {
-                            is ResultState.Error -> {
-                                context?.showToast(it.exception.message.toString())
-                            }
+            }
+        }
+    }
 
-                            is ResultState.Loading -> {
-                                // Do Nothing
-                            }
+    private fun initAdapter() {
+        binding.swipeRefresh.setOnRefreshListener(viewModel::fetchImages)
+        gridImageAdapter = GridImageAdapter(onItemClicked = { _, _, index ->
+            findNavController().navigate(
+                R.id.action_navigate_to_preview, bundleOf(
+                    GalleryFragment.FILE_INDEX to index
+                )
+            )
+        }, onItemLongClicked = { _, _, _ ->
+            actionMode = (activity as? AppCompatActivity)?.startSupportActionMode(deleteActionMode)
+            binding.fabPickImages.hide()
+        }, onSelectionChanged = {
+            actionMode?.title = "%d Selected".format(gridImageAdapter.selectedItems.size)
+            actionMode?.menu?.findItem(R.id.action_delete)?.isVisible =
+                gridImageAdapter.selectedItems.isNotEmpty()
+            actionMode?.menu?.findItem(R.id.action_share)?.isVisible =
+                gridImageAdapter.selectedItems.isNotEmpty()
+        })
+    }
 
-                            is ResultState.Success -> {
-                                actionMode?.finish()
-                                this@HomeFragment.actionMode = null
-                                binding.fabPickImages.show()
-                                gridImageAdapter.resetSelection()
-                                viewModel.fetchImages()
-                            }
-                        }
+    private fun initObserver() {
+        FileBackgroundService.FILE_BACKGROUND_PROGRESS.observe(viewLifecycleOwner) {
+            val isUpload = FileBackgroundService.ACTION_UPLOAD_IMAGES == it?.action
+            when {
+                it == null -> {
+                    // Do Nothing
+                }
+
+                it.isDone -> {
+                    if (!isUpload) {
+                        actionMode?.finish()
+                        this@HomeFragment.actionMode = null
+                        binding.fabPickImages.show()
+                        gridImageAdapter.resetSelection()
                     }
+                    viewModel.fetchImages()
+
+                    binding.layoutUploadStatus.isVisible = true
+                    val msg =
+                        if (it.action == FileBackgroundService.ACTION_UPLOAD_IMAGES) getString(R.string.image_upload_success) else getString(
+                            R.string.image_delete_success
+                        )
+                    binding.textUploadStatus.text = msg
+                    binding.textUploadProgress.isVisible = false
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        delay(2000)
+                        binding.layoutUploadStatus.isVisible = false
+                    }
+                }
+
+                else -> {
+                    val msg =
+                        if (it.action == FileBackgroundService.ACTION_UPLOAD_IMAGES) getString(R.string.uploading_images) else getString(
+                            R.string.deleting_images
+                        )
+                    binding.layoutUploadStatus.isVisible = true
+                    binding.textUploadStatus.text = "%d/%d %s".format(
+                        it.fileIndex, it.totalFile, msg
+                    )
+                    binding.textUploadProgress.text = "%d%s".format(it.progress, "%")
                 }
             }
         }
     }
 
     private fun onDeleteClicked() {
-        Log.i("HomeFragment", "onDeleteClicked")
-        viewModel.deleteFiles(gridImageAdapter.selectedItems)
+        MaterialAlertDialogBuilder(requireContext()).setIcon(R.drawable.ic_delete_24dp)
+            .setTitle(getString(R.string.title_delete_images))
+            .setMessage(getString(R.string.msg_delete_images))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
+                FileBackgroundService.startDeleteService(
+                    requireContext(), bundleOf(
+                        FileBackgroundService.IMAGE_URIS to gridImageAdapter.selectedItems
+                    )
+                )
+                context?.showToast(getString(R.string.msg_img_deleting_background))
+            }.setNegativeButton(getString(R.string.cancel), null).show()
+    }
 
+    private fun onShareClicked() {
+        val selectedItems = gridImageAdapter.selectedItems
+
+        when {
+            selectedItems.isEmpty() -> {
+                // Do Nothing
+            }
+
+            selectedItems.size <= Constants.MAX_IMAGE_SHARE -> {
+                homeCallback?.shareFiles(selectedItems)
+            }
+
+            else -> {
+                context?.showToast(
+                    getString(
+                        R.string.cannot_share_more_than_images, Constants.MAX_IMAGE_SHARE
+                    )
+                )
+            }
+        }
     }
 
     private fun onClickPickImage(view: View) {

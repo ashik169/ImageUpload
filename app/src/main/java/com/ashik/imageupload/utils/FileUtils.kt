@@ -1,15 +1,15 @@
 package com.ashik.imageupload.utils
 
+import android.content.ContentResolver
 import android.content.Context
-import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.util.Log
-import androidx.core.net.toFile
 import androidx.core.net.toUri
 import com.ashik.imageupload.BuildConfig
 import com.ashik.imageupload.extensions.createCacheImageFile
@@ -51,74 +51,79 @@ inline val Uri.isGoogleDriveUri: Boolean
 inline val Uri.isExternalStorageDocument: Boolean
     get() = "com.android.externalstorage.documents" == authority
 
+inline val File.fileSizeInMb: Float
+    get() = length().toFloat() / (1024f * 1024f)
+
 object FileUtils {
     private const val TAG = "FileUtils"
 
     const val APP_AUTHORITY = "${BuildConfig.APPLICATION_ID}.fileprovider"
     const val CLOUD_DIR_NAME = "cloud"
 
-    fun getRealPathFromUri(context: Context, uri: Uri): String? {
+    @Throws(Exception::class)
+    fun getRealPathFromUri(context: Context, uri: Uri): String {
         Log.d(TAG, "getLocalPath: $uri")
-        if (uri.isAppLocalDocument) return uri.toString()
-        if (DocumentsContract.isDocumentUri(context, uri)) {
-            when {
-                uri.isMediaDocument -> {
-                    val docId = DocumentsContract.getDocumentId(uri)
-                    val split =
-                        docId.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                    val contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                    val selection = "_id=?"
-                    val selectionArgs = arrayOf(split[1])
-                    Log.i(
-                        TAG, """MediaDocument:Uri -> $uri
-                        |split -> $split
-                        |contentUri -> $contentUri
-                    """.trimMargin()
-                    )
-                    return getDataColumn(context, contentUri, selection, selectionArgs)
-                }
+        var filePath: String? = if (uri.isAppLocalDocument) uri.toString()
+        else if (uri.isGooglePhotosUri || uri.isGoogleDriveUri || uri.isExternalStorageDocument) {
+            saveToCacheLocation(context, uri)
+        } else if (DocumentsContract.isDocumentUri(context, uri) && uri.isMediaDocument) {
+            val split = DocumentsContract.getDocumentId(uri).split(":".toRegex())
+                .dropLastWhile { it.isEmpty() }.toTypedArray()
+            Log.d(TAG, "MediaDocument Id -> ${split.joinToString { it }}")
+            getMediaDataLocation(
+                context, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "_id=?", arrayOf(split[1])
+            )
+        } else if (ContentResolver.SCHEME_CONTENT == uri.scheme) {
+            getMediaDataLocation(context, uri, null, null)
+        } else if (ContentResolver.SCHEME_FILE == uri.scheme) uri.path else null
 
-                uri.isExternalStorageDocument -> {
-                    val destinationFile = context.createCacheImageFile
-                    saveFileFromUri(context, uri, destinationFile.absolutePath)
-                    return destinationFile.absolutePath
-                }
-            }
-        } else if ("content".equals(uri.scheme, ignoreCase = true)) {
-            return if (uri.isGooglePhotosUri) {
-                val destinationFile = context.createCacheImageFile
-                saveFileFromUri(context, uri, destinationFile.absolutePath)
-                destinationFile.toString()
-            } else if (uri.isGoogleDriveUri) {
-                val destinationFile = context.createCacheImageFile
-                saveFileFromUri(context, uri, destinationFile.absolutePath)
-                destinationFile.toString()
-            } else getDataColumn(context, uri, null, null)
-        } else if ("file".equals(uri.scheme, ignoreCase = true)) {
-            return uri.path
+        if (filePath.isNullOrEmpty()) {
+            filePath = saveToCacheLocation(context, uri)
         }
-        return null
+        return filePath
     }
 
-    private fun getDataColumn(
-        context: Context, uri: Uri?, selection: String?, selectionArgs: Array<String>?
+    private fun saveToCacheLocation(context: Context, uri: Uri): String {
+        val docFileName = getDocumentFileName(context, uri)
+        Log.d(TAG, "External:Uri -> $uri -> $docFileName")
+        val destinationFile = context.createCacheImageFile(docFileName)
+        saveFileFromUri(context, uri, destinationFile.absolutePath)
+        return destinationFile.absolutePath
+    }
+
+    private fun getMediaDataLocation(
+        context: Context, uri: Uri, selection: String?, selectionArgs: Array<String>?
     ): String? {
-        var cursor: Cursor? = null
-        val column = MediaStore.Files.FileColumns.DATA
-        val projection = arrayOf(column)
-        try {
-            cursor = context.contentResolver.query(
-                uri!!, projection, selection, selectionArgs, null
-            )
-            if (cursor != null && cursor.moveToFirst()) {
-                return cursor.getString(cursor.getColumnIndexOrThrow(column))
+        Log.d(TAG, "Get DataColumn -> $uri, $selection, $selectionArgs")
+        return try {
+            val column = MediaStore.Files.FileColumns.DATA
+            val projection = arrayOf(column)
+            context.contentResolver.query(
+                uri, projection, selection, selectionArgs, null
+            )?.use {
+                return@use if (it.moveToFirst()) {
+                    it.getString(it.getColumnIndexOrThrow(column))
+                } else null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    private fun getDocumentFileName(context: Context, uri: Uri): String? {
+        return try {
+            context.contentResolver.query(
+                uri, null, null, null, null
+            )?.use {
+                if (it.moveToFirst()) {
+                    it.getString(it.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+                } else null
             }
         } catch (e: Exception) {
             Log.e("TAG", e.message.toString())
-        } finally {
-            cursor?.close()
+            return null
         }
-        return null
     }
 
     private fun saveFileFromUri(context: Context, uri: Uri, destinationPath: String) {
@@ -128,65 +133,50 @@ object FileUtils {
             outputStream.use { fileOut ->
                 while (true) {
                     val length = fileIn.read(buffer)
-                    if (length <= 0)
-                        break
+                    if (length <= 0) break
                     fileOut.write(buffer, 0, length)
                 }
                 fileOut.close()
             }
         }
-        /*var inputStream: InputStream? = null
-        var bos: BufferedOutputStream? = null
-        try {
-            inputStream = context.contentResolver.openInputStream(uri)
-            bos = BufferedOutputStream(FileOutputStream(destinationPath, false))
-            val buf = ByteArray(1024)
-            inputStream!!.read(buf)
-            do {
-                bos.write(buf)
-            } while (inputStream.read(buf) != -1)
-        } catch (e: IOException) {
-            e.printStackTrace()
-        } finally {
-            try {
-                inputStream?.close()
-                bos?.close()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }*/
     }
 
     @Throws(Exception::class)
     fun saveCompressImage(context: Context, uri: Uri, destinationPath: String) {
-        val options = BitmapFactory.Options().apply {
-            inSampleSize = 2
-        }
-        val scheme = uri.scheme
-        Log.i(TAG, "scheme -> $scheme")
-        val inputBitmap = if (scheme == "file") {
-            val srcFile = uri.toFile()
-            BitmapFactory.decodeFile(srcFile.absolutePath, options)
-                ?: throw NullPointerException("Bitmap not found -> $srcFile")
-        } else {
-            context.contentResolver.openInputStream(uri).use {
-                BitmapFactory.decodeStream(it, null, options)
-            } ?: throw NullPointerException("Bitmap not found")
-        }
+        Log.d(TAG, "saveCompressImage -> $uri -> $destinationPath")
+        val outputOptions = BitmapFactory.Options().apply {
+            inSampleSize = 1
+        }/*val inputBitmap = when (uri.scheme) {
+            "file" -> {
+                val srcFile = uri.toFile()
+                BitmapFactory.decodeFile(srcFile.absolutePath, outputOptions)
+                    ?: throw NullPointerException("Bitmap not found -> $srcFile")
+            }
+
+            else -> {
+                context.contentResolver.openInputStream(uri).use {
+                    BitmapFactory.decodeStream(it, null, outputOptions)
+                } ?: throw NullPointerException("Bitmap not found")
+            }
+        }*/
+        val inputBitmap = context.contentResolver.openInputStream(uri).use {
+            BitmapFactory.decodeStream(it, null, outputOptions)
+        } ?: throw NullPointerException("Bitmap not found")
 
         FileOutputStream(destinationPath).use {
-            inputBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+            inputBitmap.compress(Bitmap.CompressFormat.JPEG, 95, it)
             it.flush()
         }
     }
 
-    fun getBitmap(file: File): Bitmap? {
+    fun getBitmap(file: File, sampleSize: Int = 1): Bitmap? {
         return try {
             val options = BitmapFactory.Options().apply {
-                inSampleSize = 1
+                inSampleSize = sampleSize
             }
-            BitmapFactory.decodeFile(file.absolutePath, options)
-                ?: throw NullPointerException("Bitmap not found -> $file")
+            BitmapFactory.decodeFile(file.absolutePath, options) ?: throw NullPointerException(
+                "Bitmap not found -> $file"
+            )
         } catch (e: Exception) {
             e.printStackTrace()
             return null
@@ -221,6 +211,29 @@ object FileUtils {
             fileSize = file.length(),
             lastModified = DateUtil.getUIDateTimeFormat(file.lastModified())
         )
+    }
+
+
+    fun getFileInfo(context: Context, uri: Uri): FileInfoModel? {
+        try {
+            val sPath = getRealPathFromUri(context, uri)
+            val filePath = File(sPath)
+            val fileUri = if (sPath.isNotEmpty()) filePath.toUri() else return null
+            Log.d(
+                TAG, """ContentUri -> $uri 
+                    |File Path -> $filePath
+                    |File Uri -> $fileUri""".trimMargin()
+            )
+            return FileInfoModel(
+                uri = fileUri,
+                file = filePath,
+                fileName = filePath.name,
+                fileSize = filePath.length(),
+                lastModified = DateUtil.getUIDateTimeFormat(filePath.lastModified())
+            )
+        } catch (e: Exception) {
+            return null
+        }
     }
 
     fun fileSize(size: Long): String {

@@ -16,11 +16,12 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
+import com.ashik.imageupload.BuildConfig
 import com.ashik.imageupload.R
 import com.ashik.imageupload.dao.DataRepository
 import com.ashik.imageupload.extensions.parcelableArrayList
 import com.ashik.imageupload.model.FileInfoModel
-import com.ashik.imageupload.model.UploadProgressModel
+import com.ashik.imageupload.model.FileProgressModel
 import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,27 +29,37 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class ImageUploadService : Service() {
+class FileBackgroundService : Service() {
 
     companion object {
-        private const val TAG = "ImageUploadService"
+        private const val TAG = "BackgroundService"
 
         private const val UPLOAD_CHANNEL_ID = "upload_service"
         private const val UPLOAD_CHANNEL_NAME = "Upload Service"
 
-        const val IMAGE_URIS = "image_uris"
-
         private const val UPLOAD_NOTIFICATION_ID = 2
 
-        val UPLOAD_PROGRESS = MutableLiveData<UploadProgressModel?>()
+        val FILE_BACKGROUND_PROGRESS = MutableLiveData<FileProgressModel?>()
 
-        fun startService(packageContext: Context, bundle: Bundle) {
+        const val ACTION_UPLOAD_IMAGES = "${BuildConfig.APPLICATION_ID}.UPLOAD_IMAGES"
+
+        const val ACTION_DELETE_IMAGES = "${BuildConfig.APPLICATION_ID}.DELETE_IMAGES"
+
+        const val IMAGE_URIS = "image_uris"
+
+        fun startUploadService(context: Context, bundle: Bundle) {
+            startService(context, bundle, ACTION_UPLOAD_IMAGES)
+        }
+
+        fun startDeleteService(context: Context, bundle: Bundle) {
+            startService(context, bundle, ACTION_DELETE_IMAGES)
+        }
+
+        private fun startService(context: Context, bundle: Bundle, intentAction: String) {
             val serviceIntent = Intent(
-                packageContext, ImageUploadService::class.java
-            ).apply {
-                putExtras(bundle)
-            }
-            ContextCompat.startForegroundService(packageContext, serviceIntent)
+                context, FileBackgroundService::class.java
+            ).putExtras(bundle).apply { action = intentAction }
+            ContextCompat.startForegroundService(context, serviceIntent)
         }
     }
 
@@ -74,9 +85,12 @@ class ImageUploadService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         showForeground()
-        val uris = intent?.extras?.parcelableArrayList<FileInfoModel>(IMAGE_URIS)
-        if (!uris.isNullOrEmpty()) {
-            uploadImages(uris.toList())
+        val imageUris = intent?.extras?.parcelableArrayList<FileInfoModel>(IMAGE_URIS)?.toList()
+        if (!imageUris.isNullOrEmpty()) {
+            when (intent.action) {
+                ACTION_UPLOAD_IMAGES -> uploadImages(imageUris)
+                ACTION_DELETE_IMAGES -> deleteImages(imageUris)
+            }
         } else {
             stopSelf()
             stopForegroundService()
@@ -85,41 +99,69 @@ class ImageUploadService : Service() {
     }
 
     private fun uploadImages(list: List<FileInfoModel>) {
-        Log.i(TAG, "uploadImages -> $list")
         coroutineScope.launch {
             for (i in list.indices) {
                 val infoModel = list[i]
-                updateNotification(i, list.size)
+                updateNotification(action = ACTION_UPLOAD_IMAGES, index = i, totalCount = list.size)
                 val uploadImage = repository.uploadImage(infoModel)
-                Log.i(TAG, "uploadImage -> ${uploadImage.isSuccess}")
+                Log.i(TAG, "uploadImage -> ${uploadImage.isSuccess} -> $infoModel")
             }
-            updateNotification(0, list.size, true)
+            updateNotification(
+                action = ACTION_UPLOAD_IMAGES, index = 0, totalCount = list.size, isDone = true
+            )
             delay(2000)
             stopSelf()
             stopForegroundService()
         }
     }
 
-    private fun updateNotification(index: Int, totalCount: Int, isDone: Boolean = false) {
-        val uploadProgressModel =
-            UploadProgressModel(totalFile = totalCount, fileIndex = index + 1, isDone = isDone)
+    private fun deleteImages(list: List<FileInfoModel>) {
+        Log.i(TAG, "deleteImages -> $list")
+        coroutineScope.launch {
+            for (i in list.indices) {
+                val infoModel = list[i]
+                updateNotification(action = ACTION_DELETE_IMAGES, index = i, totalCount = list.size)
+                val uploadImage = repository.deleteImage(infoModel)
+                Log.i(TAG, "deleteImages -> ${uploadImage.isSuccess}")
+            }
+            updateNotification(
+                action = ACTION_DELETE_IMAGES, index = 0, totalCount = list.size, isDone = true
+            )
+            delay(2000)
+            stopSelf()
+            stopForegroundService()
+        }
+    }
+
+    private fun updateNotification(
+        action: String, index: Int, totalCount: Int, isDone: Boolean = false
+    ) {
+        val isUpload = action == ACTION_UPLOAD_IMAGES
+        val progressModel = FileProgressModel(
+            action = action, totalFile = totalCount, fileIndex = index + 1, isDone = isDone
+        )
         val builder = NotificationCompat.Builder(this, UPLOAD_CHANNEL_ID).apply {
             setSmallIcon(R.mipmap.ic_launcher)
             priority = NotificationCompat.PRIORITY_HIGH
             setContentTitle(getString(R.string.app_name))
-            if (isDone) {
-                setContentText(getString(R.string.image_upload_success))
-            } else {
-                val uploadProgress = ((index + 1) / totalCount) * 100
-                uploadProgressModel.progress = uploadProgress
-                setContentText(getString(R.string.uploading_progress, "${uploadProgress}%"))
-                setProgress(100, uploadProgress, false)
+            if (!isDone) {
+                val progress = (((index + 1).toDouble() / totalCount.toDouble()) * 100.0).toInt()
+                progressModel.progress = progress
+                val message = if (isUpload) getString(
+                    R.string.uploading_progress, "${progress}%"
+                ) else getString(R.string.deleting_progress, "${progress}%")
+                setContentText(message)
+                setProgress(100, progress, false)
                 setSilent(true)
+            } else {
+                val message =
+                    if (isUpload) getString(R.string.image_upload_success) else getString(R.string.image_delete_success)
+                setContentText(message)
             }
         }
-        UPLOAD_PROGRESS.postValue(uploadProgressModel)
+        FILE_BACKGROUND_PROGRESS.postValue(progressModel)
         if (ActivityCompat.checkSelfPermission(
-                this@ImageUploadService, Manifest.permission.POST_NOTIFICATIONS
+                this@FileBackgroundService, Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             val notificationManagerCompat = NotificationManagerCompat.from(this)
@@ -132,8 +174,8 @@ class ImageUploadService : Service() {
     private fun showForeground() {
         val notification =
             NotificationCompat.Builder(this, UPLOAD_CHANNEL_ID).setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(getString(R.string.app_name)).setContentText("Image Uploading...")
-                .setColor(
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(getString(R.string.uploading_images)).setColor(
                     MaterialColors.getColor(
                         applicationContext,
                         com.google.android.material.R.attr.colorPrimary,
@@ -144,7 +186,7 @@ class ImageUploadService : Service() {
     }
 
     override fun onDestroy() {
-        UPLOAD_PROGRESS.postValue(null)
+        FILE_BACKGROUND_PROGRESS.postValue(null)
         super.onDestroy()
         job.cancel()
     }

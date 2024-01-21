@@ -1,6 +1,7 @@
 package com.ashik.imageupload.utils
 
 import android.graphics.Bitmap
+import android.util.Log
 import android.util.LruCache
 
 class ImageCache private constructor() {
@@ -21,6 +22,7 @@ class ImageCache private constructor() {
     init {
         val maxMemory = Runtime.getRuntime().maxMemory() / 1024
         val cacheSize = (maxMemory / 4).toInt()
+        Log.d("ImageCache", "cacheSize -> $cacheSize and maxMemory -> $maxMemory")
         cache = object : LruCache<String, Bitmap>(cacheSize) {
             override fun sizeOf(key: String, value: Bitmap): Int {
                 return (value.rowBytes) * (value.height) / 1024
@@ -32,11 +34,11 @@ class ImageCache private constructor() {
         cache.put(url, bitmap)
     }
 
-    fun get(url: String): Bitmap? {
-        return cache.get(url)
-    }
+    fun get(url: String): Bitmap? = cache.get(url)
 
-    fun clear() {
+    fun contains(url: String): Boolean = cache.get(url) != null
+
+    fun clearMemoryCache() {
         cache.evictAll()
     }
 }

@@ -14,4 +14,8 @@ data class FileInfoModel(
     val createdDate: String? = null,
     val lastModified: String? = null,
     var isSelected: Boolean = false,
-) : Parcelable
+    var dimension: String? = null,
+) : Parcelable {
+    val thumbnailKey: String
+        get() = "${file.absolutePath}_thumb"
+}

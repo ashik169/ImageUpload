@@ -14,12 +14,25 @@
     <string name="gallery">Gallery</string>
     <string name="label_uploading">Uploading…</string>
     <string name="preview_image">Preview Image</string>
-    <string name="image_upload_success">Image uploaded successfully</string>
+    <string name="image_upload_success">Images are uploaded successfully</string>
+    <string name="image_delete_success">Images are deleted successfully</string>
 
     <string name="uploading_progress">Uploading %1$s</string>
+    <string name="deleting_progress">Deleting %1$s</string>
     <string name="label_info">Info</string>
     <string name="file_info">File Info</string>
     <string name="hint_max_img_allow">Maximum %1$d images allow picks from gallery</string>
     <string name="label_add">Add</string>
     <string name="menu_item_delete">Delete</string>
+    <string name="msg_delete_images">Are you sure you want to delete the selected images?</string>
+    <string name="title_delete_images">Delete Images?</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="uploading_images">Uploading Images…</string>
+    <string name="deleting_images">Deleting Images…</string>
+    <string name="msg_img_uploading_background">Images are uploading from background</string>
+    <string name="msg_img_deleting_background">Images are deleting from background</string>
+    <string name="images_path_not_found">Images path not found</string>
+    <string name="label_share">Share</string>
+    <string name="cannot_share_more_than_images">Cannot share more than %1$d images</string>
 </resources>

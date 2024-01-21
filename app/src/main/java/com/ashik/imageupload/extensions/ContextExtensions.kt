@@ -31,11 +31,11 @@ fun Context.getUriForFile(file: File): Uri = FileProvider.getUriForFile(
     applicationContext, FileUtils.APP_AUTHORITY, file
 )
 
-val Context.createCacheImageFile: File
-    @Throws(IOException::class) get() {
+fun Context.createCacheImageFile(fileName: String? = null): File =
+    if (fileName.isNullOrEmpty()) {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ENGLISH).format(Date())
-        return File(cacheDir, "IMG_${timeStamp}.jpg")
-    }
+        File(cacheDir, "IMG_${timeStamp}.jpg")
+    } else File(cacheDir, fileName)
 
 @Throws(IOException::class)
 fun Context.createCloudFile(fileName: String?): File {
@@ -43,9 +43,7 @@ fun Context.createCloudFile(fileName: String?): File {
     if (!cloudDir.exists()) cloudDir.mkdirs()
     return if (fileName.isNullOrEmpty()) {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.ENGLISH).format(Date())
-        File(
-            cloudDir, "IMG_${timeStamp}.jpg"
-        )
+        File(cloudDir, "IMG_${timeStamp}.jpg")
     } else File(cloudDir, fileName)
 }
 
@@ -57,5 +55,16 @@ inline fun <reified T : Parcelable> Bundle?.parcelableArrayList(key: String): Ar
         )
 
         else -> @Suppress("DEPRECATION") getParcelableArrayList(key)
+    }
+}
+
+inline fun <reified T : Parcelable> Bundle?.parcelable(key: String): T? {
+    this ?: return null
+    return when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> getParcelable(
+            key, T::class.java
+        )
+
+        else -> @Suppress("DEPRECATION") getParcelable(key)
     }
 }

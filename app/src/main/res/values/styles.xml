@@ -5,4 +5,10 @@
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>
     </style>
+
+    <style name="AppActionModeStyle" parent="@style/Widget.Material3.ActionMode">
+        <item name="background">?attr/colorPrimaryContainer</item>
+        <item name="titleTextStyle">@style/TextAppearance.Material3.TitleMedium</item>
+        <item name="subtitleTextStyle">@style/TextAppearance.Material3.TitleSmall</item>
+    </style>
 </resources>

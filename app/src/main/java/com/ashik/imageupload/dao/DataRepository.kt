@@ -31,9 +31,7 @@ class DataRepository private constructor(private val application: Application) {
         val cloudDir = File(filesDir, FileUtils.CLOUD_DIR_NAME)
         cloudDir.walkTopDown().filter {
             !it.isDirectory && it.extension.isNotEmpty()
-        }.sortedByDescending(File::lastModified).toList().also {
-            Log.i(TAG, it.joinToString { file -> file.absolutePath })
-        }
+        }.sortedByDescending(File::lastModified).toList()
     }
 
     suspend fun uploadImage(fileInfoModel: FileInfoModel): Result<Boolean> =
@@ -44,16 +42,25 @@ class DataRepository private constructor(private val application: Application) {
                 val cloudFile = application.createCloudFile(fileInfoModel.fileName).apply {
                     setLastModified(srcFile.lastModified())
                 }
-                Log.i(
+                Log.d(
                     TAG, """cloudFile -> $cloudFile
-                        | sourceFile -> $srcFile
+                        |fileInfoModel -> $fileInfoModel
                     """.trimMargin()
                 )
-//        FileUtils.saveFileFromUri(application, uri, cloudFile.absolutePath)
                 FileUtils.saveCompressImage(application, fileInfoModel.uri, cloudFile.absolutePath)
                 Result.success(true)
             } catch (e: Exception) {
                 e.printStackTrace()
+                Result.failure(e)
+            }
+        }
+
+
+    suspend fun deleteImage(fileInfoModel: FileInfoModel): Result<Boolean> =
+        withContext(Dispatchers.IO) {
+            try {
+                Result.success(fileInfoModel.file.delete())
+            } catch (e: Exception) {
                 Result.failure(e)
             }
         }

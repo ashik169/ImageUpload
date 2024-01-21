@@ -1,5 +1,7 @@
 package com.ashik.imageupload.ui.home
 
+import android.annotation.SuppressLint
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -41,14 +43,16 @@ class GridImageAdapter(
         })
     }
 
-    private fun selectItem(holder: GridImageAdapter.GridImageVH, image: FileInfoModel) {
+    private fun selectItem(holder: GridImageAdapter.GridImageVH, infoModel: FileInfoModel) {
         // If the "selectedItems" list contains the item, remove it and set it's state to normal
-        if (selectedItems.contains(image)) {
-            selectedItems.remove(image)
+        if (selectedItems.contains(infoModel)) {
+            infoModel.isSelected = false
+            selectedItems.remove(infoModel)
             holder.itemView.findViewById<ImageView>(R.id.imagePreview).alpha = 1.0f
         } else {
             // Else, add it to the list and add a darker shade over the image, letting the user know that it was selected
-            selectedItems.add(image)
+            selectedItems.add(infoModel)
+            infoModel.isSelected = true
             holder.itemView.findViewById<ImageView>(R.id.imagePreview).alpha = 0.3f
         }
     }
@@ -57,11 +61,13 @@ class GridImageAdapter(
         holder.onBindData(getItem(position))
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun resetSelection() {
         multiSelect = false
         selectedItems.clear()
-//        val list = currentList.onEach { it.isSelected = false }
+        currentList.onEach { it.isSelected = false }
 //        submitList(list)
+        notifyItemRangeChanged(0, itemCount)
     }
 
     inner class GridImageVH(
@@ -70,9 +76,10 @@ class GridImageAdapter(
         itemLongClicked: (GridImageVH, Int) -> Unit
     ) : RecyclerView.ViewHolder(binding.root) {
         fun onBindData(fileInfoModel: FileInfoModel) {
+            val file = fileInfoModel.file
             binding.imagePreview.alpha = if (fileInfoModel.isSelected) 0.3f else 1.0f
-            when (val bitmap = imageCache.get(fileInfoModel.file.absolutePath)) {
-                null -> binding.imagePreview.setImageURI(fileInfoModel.file.toUri())
+            when (val bitmap = imageCache.get("${file.absolutePath}_thumb")) {
+                null -> binding.imagePreview.setImageURI(file.toUri())
                 else -> binding.imagePreview.setImageBitmap(bitmap)
             }
         }

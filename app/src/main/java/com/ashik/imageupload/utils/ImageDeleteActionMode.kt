@@ -1,16 +1,12 @@
 package com.ashik.imageupload.utils
 
-import android.content.Context
-import android.os.Parcelable
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.view.ActionMode
-import androidx.recyclerview.widget.ListAdapter
-import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.ashik.imageupload.R
 
 class ImageDeleteActionMode(
-    private val context: Context,
+    private val onShareClicked: () -> Unit,
     private val onDeleteClicked: () -> Unit,
     private val onDestroyMode: () -> Unit
 ) :
@@ -18,7 +14,7 @@ class ImageDeleteActionMode(
 
     override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
         val inflater = mode.menuInflater
-        inflater.inflate(R.menu.menu_delete, menu)
+        inflater.inflate(R.menu.menu_grid_action_mode, menu)
         return true
     }
 
@@ -27,11 +23,17 @@ class ImageDeleteActionMode(
     }
 
     override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-        if (item.itemId == R.id.action_delete) {
-            onDeleteClicked()
-            return true
+        when (item.itemId) {
+            R.id.action_delete -> {
+                onDeleteClicked()
+                return true
+            }
+            R.id.action_share -> {
+                onShareClicked()
+                return true
+            }
+            else -> return false
         }
-        return false
     }
 
     override fun onDestroyActionMode(mode: ActionMode?) {

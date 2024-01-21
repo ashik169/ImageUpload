@@ -27,6 +27,8 @@ class FileInfoViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
                 )
                 fileInfo.fileSize?.takeIf { it > 0L }
                     ?.let { attributes.add(FileAttribute("Size", FileUtils.fileSize(it))) }
+                fileInfo.dimension?.takeIf { it.isNotEmpty() }
+                    ?.let { attributes.add(FileAttribute("Dimension", it)) }
                 fileInfo.createdDate?.takeIf(String::isNotEmpty)
                     ?.let { attributes.add(FileAttribute("Created Date", it)) }
                 fileInfo.lastModified?.takeIf(String::isNotEmpty)

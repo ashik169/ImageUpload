@@ -48,14 +48,10 @@ open class MediaResultContract(
 
     private val mNextLocalRequestCode = AtomicInteger()
     private val randomRegisterKey: String
-        get() {
-            val requestCode = "fragment_rq#${mNextLocalRequestCode.getAndIncrement()}"
-            Log.d("MediaResultLauncher", "requestCode -> $requestCode")
-            return requestCode
-        }
+        get() = "fragment_rq#${mNextLocalRequestCode.getAndIncrement()}"
 
     private val isPhotoPickerAvailable
-        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
     private var isCameraPermission = false
     private var photoFile: File? = null
@@ -138,12 +134,8 @@ open class MediaResultContract(
             ?.let(permissions::add)
         if (permissions.isEmpty()) {
             photoFile = try {
-                val imageFile = context.createCacheImageFile
+                val imageFile = context.createCacheImageFile()
                 val photoUri = context.getUriForFile(imageFile)
-                Log.i(
-                    TAG, """photoUri -> $photoUri 
-                    |photoFile -> $photoFile""".trimMargin()
-                )
                 cameraAppResultLauncher.launch(photoUri)
                 imageFile
             } catch (ex: IOException) {

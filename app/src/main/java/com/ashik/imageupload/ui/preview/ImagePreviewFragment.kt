@@ -1,6 +1,5 @@
 package com.ashik.imageupload.ui.preview
 
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -8,6 +7,7 @@ import android.view.ViewGroup
 import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import com.ashik.imageupload.databinding.LayoutImagePreviewBinding
+import com.ashik.imageupload.extensions.parcelable
 import com.ashik.imageupload.model.FileInfoModel
 import com.ashik.imageupload.utils.ImageCache
 
@@ -39,16 +39,11 @@ class ImagePreviewFragment : Fragment() {
         return binding.root
     }
 
-    @Suppress("DEPRECATION")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val fileInfoModel =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) requireArguments().getParcelable(
-                IMAGE_URI, FileInfoModel::class.java
-            ) else requireArguments().getParcelable(IMAGE_URI)
-        if (fileInfoModel != null) {
-            when (val bitmap = imageCache.get(fileInfoModel.file.absolutePath)) {
-                null -> binding.imagePreview.setImageURI(fileInfoModel.file.toUri())
+        requireArguments().parcelable<FileInfoModel>(IMAGE_URI)?.let {
+            when (val bitmap = imageCache.get(it.file.absolutePath)) {
+                null -> binding.imagePreview.setImageURI(it.file.toUri())
                 else -> binding.imagePreview.setImageBitmap(bitmap)
             }
         }
