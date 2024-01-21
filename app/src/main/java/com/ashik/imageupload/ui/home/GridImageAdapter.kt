@@ -1,7 +1,6 @@
 package com.ashik.imageupload.ui.home
 
 import android.annotation.SuppressLint
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView

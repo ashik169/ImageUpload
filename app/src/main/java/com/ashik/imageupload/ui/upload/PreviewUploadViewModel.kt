@@ -2,25 +2,19 @@ package com.ashik.imageupload.ui.upload
 
 import android.app.Application
 import android.net.Uri
-import android.util.Log
-import androidx.core.graphics.BitmapCompat
-import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.ashik.imageupload.model.FileInfoModel
 import com.ashik.imageupload.model.ResultState
-import com.ashik.imageupload.utils.DateUtil
 import com.ashik.imageupload.utils.FileUtils
 import com.ashik.imageupload.utils.ImageCache
 import com.ashik.imageupload.utils.fileSizeInMb
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 class PreviewUploadViewModel(application: Application, savedStateHandle: SavedStateHandle) :
     AndroidViewModel(application) {

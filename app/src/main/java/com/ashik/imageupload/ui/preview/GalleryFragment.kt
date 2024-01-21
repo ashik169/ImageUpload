@@ -72,7 +72,7 @@ class GalleryFragment : Fragment(), MenuProvider {
 
         val fileIndex = requireArguments().getInt(FILE_INDEX, 0)
 
-        requireActivity().addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
+//        requireActivity().addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
 
         binding.btnInfo.setOnClickListener { onClickInfo() }
         binding.btnShare.setOnClickListener { onClickShare() }

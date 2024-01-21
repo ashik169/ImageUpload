@@ -30,7 +30,6 @@ import com.ashik.imageupload.ui.IMediaResultCallback
 import com.ashik.imageupload.ui.MediaResultContract
 import com.ashik.imageupload.ui.imageoption.ImageOptionAdapter
 import com.ashik.imageupload.ui.preview.GalleryFragment
-import com.ashik.imageupload.ui.preview.ImagePreviewPagerAdapter
 import com.ashik.imageupload.ui.upload.PreviewUploadFragment
 import com.ashik.imageupload.utils.Constants
 import com.ashik.imageupload.utils.ImageDeleteActionMode

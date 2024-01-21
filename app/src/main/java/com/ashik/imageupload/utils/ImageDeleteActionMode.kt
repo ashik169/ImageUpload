@@ -23,16 +23,18 @@ class ImageDeleteActionMode(
     }
 
     override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-        when (item.itemId) {
+        return when (item.itemId) {
             R.id.action_delete -> {
                 onDeleteClicked()
-                return true
+                true
             }
+
             R.id.action_share -> {
                 onShareClicked()
-                return true
+                true
             }
-            else -> return false
+
+            else -> false
         }
     }
 

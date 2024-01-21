@@ -1,7 +1,6 @@
 package com.ashik.imageupload.ui.preview
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.ashik.imageupload.model.FileInfoModel

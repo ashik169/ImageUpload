@@ -1,6 +1,5 @@
 package com.ashik.imageupload.ui.home
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -21,7 +20,6 @@ import com.ashik.imageupload.extensions.getUriForFile
 import com.ashik.imageupload.model.FileInfoModel
 import com.ashik.imageupload.ui.upload.PreviewUploadFragment
 import com.ashik.imageupload.utils.Constants
-import java.io.File
 
 class HomeActivity : AppCompatActivity(), HomeCallback {
 
