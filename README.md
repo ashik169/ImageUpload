@@ -18,20 +18,19 @@ Used Activity Result API picking an image.
 Parse gallery Uri using FileUtils finding file path.
 
 ### 3. Upload Image
-  - Selected images will be uploaded to server through Background Service. 
+  - Selected images will be uploaded to server through [FileBackgroundService.kt](app%2Fsrc%2Fmain%2Fjava%2Fcom%2Fashik%2Fimageupload%2Fservice%2FFileBackgroundService.kt). 
   - Only maximum 10 images allowed to upload at a time. 
   - Images will be saved to cloud directory in the local storage.
-[FileBackgroundService.kt](app%2Fsrc%2Fmain%2Fjava%2Fcom%2Fashik%2Fimageupload%2Fservice%2FFileBackgroundService.kt)
 
 ### 3. Delete Image
-On Home Screen, By clicking long press of image selection mode will presence. You can either delete multiple images or share to other apps.
-[FileBackgroundService.kt](app%2Fsrc%2Fmain%2Fjava%2Fcom%2Fashik%2Fimageupload%2Fservice%2FFileBackgroundService.kt) 
-<img src="https://github.com/ashik169/ImageUpload/blob/main/screenshots/Screenshot_20240121_203433_multi_select.png" alt="drawing" width="250"/>
+User can delete one or more selected images. By clicking long press of grid image in home screen selection mode will presence. You can either delete multiple images through [FileBackgroundService.kt](app%2Fsrc%2Fmain%2Fjava%2Fcom%2Fashik%2Fimageupload%2Fservice%2FFileBackgroundService.kt) 
 
-### 3. Receive Images from the other app
+<img src="https://github.com/ashik169/ImageUpload/blob/main/screenshots/Screenshot_20240121_203433_multi_select.png" alt="drawing" width="200"/>
+
+### 3. Receive Images from other apps
 If you share any images from gallery app. App icon will be present receiving a images. 
 
-### 3. Share Images to the other app
+### 3. Share Images to other apps
 Can share saved images to other apps one or more images. 
 
 #### Home Screen
