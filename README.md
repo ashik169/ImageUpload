@@ -46,4 +46,7 @@ Can share saved images to other apps one or more images.
 #### Gallery Screen
 <img src="https://github.com/ashik169/ImageUpload/blob/main/screenshots/Screenshot_20240121_183844_gallery.png" alt="drawing" width="250"/>
 
+#### FileInfo Screen
+<img src="https://github.com/ashik169/ImageUpload/blob/main/screenshots/Screenshot_20240121_204713_file_info.png" alt="drawing" width="250"/>
+
 
