@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Image Upload</string>
 
-    <string name="preview_fragment_label">Preview</string>
+    <string name="label_preview">Preview</string>
     <string name="label_pick_image">Choose an Image</string>
     <string name="label_choose_an_option">Choose an Option</string>
     <string name="upload_label">Upload</string>
@@ -10,6 +10,8 @@
     <string name="hint_pick_image">
         Backup your photos\nShare your photos to family and friends
     </string>
+    <string name="pick_image">Select an image</string>
+    <string name="hint_task_info">Choose an image upload either from gallery or camera. Preview it and then upload.</string>
     <string name="camera">Camera</string>
     <string name="gallery">Gallery</string>
     <string name="label_uploading">Uploading…</string>

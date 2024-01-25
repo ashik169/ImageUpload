@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/HomeFragment">
+    app:startDestination="@id/ImageUploadViewFragment">
 
     <fragment
         android:id="@+id/HomeFragment"
@@ -18,23 +18,33 @@
         <action
             android:id="@+id/action_navigate_to_preview"
             app:destination="@id/PreviewFragment" />
+
+        <action
+            android:id="@+id/action_navigate_to_view_component"
+            app:destination="@id/ImageUploadViewFragment" />
     </fragment>
     <fragment
         android:id="@+id/UploadImageFragment"
         android:name="com.ashik.imageupload.ui.upload.PreviewUploadFragment"
-        android:label="@string/preview_fragment_label"
+        android:label="@string/label_preview"
         tools:layout="@layout/fragment_preview_upload" />
 
     <fragment
         android:id="@+id/PreviewFragment"
         android:name="com.ashik.imageupload.ui.preview.GalleryFragment"
-        android:label="@string/preview_fragment_label"
+        android:label="@string/label_preview"
         tools:layout="@layout/fragment_gallery">
 
         <action
             android:id="@+id/action_navigate_to_file_info"
             app:destination="@id/FileInfoDialog" />
     </fragment>
+
+    <fragment
+        android:id="@+id/ImageUploadViewFragment"
+        android:name="com.ashik.imageupload.ui.component.ImageUploadViewFragment"
+        android:label="@string/app_name"
+        tools:layout="@layout/fragment_image_upload_view" />
 
     <dialog
         android:id="@+id/FileInfoDialog"

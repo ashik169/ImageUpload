@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+
+    <declare-styleable name="ImageUploadView">
+        <attr name="android:hint" format="reference" />
+        <attr name="android:textColorHint" format="reference" />
+        <attr name="placeholderIcon" format="reference" />
+        <attr name="placeholderIconTint" format="reference" />
+    </declare-styleable>
+</resources>

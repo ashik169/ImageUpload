@@ -3,12 +3,17 @@ package com.ashik.imageupload.ui.home
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
 import androidx.core.os.bundleOf
+import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -40,7 +45,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 
-class HomeFragment : Fragment(), IMediaResultCallback {
+class HomeFragment : Fragment(), IMediaResultCallback, MenuProvider {
 
 
     private var _binding: FragmentHomeBinding? = null
@@ -65,9 +70,15 @@ class HomeFragment : Fragment(), IMediaResultCallback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("HomeFragment", "onCreate")
         mediaResultContract =
             MediaResultContract(requireContext(), requireActivity().activityResultRegistry, this)
         lifecycle.addObserver(mediaResultContract)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("HomeFragment", "onDestroy")
     }
 
     override fun onCreateView(
@@ -79,6 +90,7 @@ class HomeFragment : Fragment(), IMediaResultCallback {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        requireActivity().addMenuProvider(this, viewLifecycleOwner, Lifecycle.State.RESUMED)
         initObserver()
         initAdapter()
         deleteActionMode = ImageDeleteActionMode(
@@ -259,5 +271,19 @@ class HomeFragment : Fragment(), IMediaResultCallback {
                 PreviewUploadFragment.IMAGE_URIS to uris
             )
         )
+    }
+
+    override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+        menuInflater.inflate(R.menu.menu_home, menu)
+    }
+
+    override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+        when (menuItem.itemId) {
+            R.id.action_view_component -> {
+                findNavController().navigate(R.id.action_navigate_to_view_component)
+                return true
+            }
+        }
+        return false
     }
 }

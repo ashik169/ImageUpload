@@ -6,10 +6,19 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
+import android.view.LayoutInflater
+import android.view.View
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.ashik.imageupload.R
+import com.ashik.imageupload.databinding.PickImageOptionsBinding
+import com.ashik.imageupload.model.ImageOption
+import com.ashik.imageupload.ui.imageoption.ImageOptionAdapter
+import com.ashik.imageupload.utils.Constants
 import com.ashik.imageupload.utils.FileUtils
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -67,4 +76,26 @@ inline fun <reified T : Parcelable> Bundle?.parcelable(key: String): T? {
 
         else -> @Suppress("DEPRECATION") getParcelable(key)
     }
+}
+
+fun Context.showChooseOptions(optionCallback: (ImageOption) -> Unit) {
+    val imageOptions = ImageOption.IMAGE_OPTIONS
+    val bottomSheetDialog = BottomSheetDialog(this)
+    val pickImageOptionsBinding =
+        PickImageOptionsBinding.inflate(LayoutInflater.from(this)).apply {
+            hintMaxImage.text =
+                getString(R.string.hint_max_img_allow, Constants.MAX_IMAGE_UPLOAD)
+        }
+    bottomSheetDialog.setContentView(pickImageOptionsBinding.root)
+    val imageOptionAdapter = ImageOptionAdapter { option, _, _ ->
+        optionCallback(option)
+        bottomSheetDialog.dismiss()
+    }
+    imageOptionAdapter.submitList(imageOptions)
+    pickImageOptionsBinding.rvOptions.apply {
+        layoutManager = LinearLayoutManager(context)
+//            layoutManager = GridLayoutManager(context, 2)
+        adapter = imageOptionAdapter
+    }
+    bottomSheetDialog.show()
 }

@@ -18,14 +18,14 @@
             app:subtitleTextAppearance="?textAppearanceBodySmall"
             app:titleTextAppearance="?textAppearanceTitleMedium"
             tools:subtitle="IMG_1000239323343.jpg"
-            tools:title="@string/preview_fragment_label" />
+            tools:title="@string/label_preview" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
     <include layout="@layout/content_main" />
 
     <LinearLayout
-        android:id="@+id/layout_loading"
+        android:id="@+id/layoutLoading"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#66FFFFFF"
